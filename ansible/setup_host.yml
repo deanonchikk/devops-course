@@ -1,0 +1,38 @@
+---
+- name: Prepare docker host
+  hosts: servers
+  become: true
+
+  tasks:
+    - name: Ensure docker and compose are installed
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+
+    - name: Ensure user deployer exists
+      ansible.builtin.user:
+        name: deployer
+        shell: /bin/bash
+        create_home: true
+        groups:
+          - sudo
+          - docker
+        append: true
+        state: present
+
+    - name: Allow deployer to use sudo without password
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/deployer
+        content: "deployer ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
+    - name: Ensure docker is running and starts on boot
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
